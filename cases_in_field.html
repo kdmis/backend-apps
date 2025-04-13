@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>File Transfer Dashboard - Modern UI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .transition-height {
+      transition: max-height 0.4s ease-in-out;
+      overflow: hidden;
+    }
+  .text-transition {
+    transition: max-height 0.3s ease;
+  }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-extrabold text-center text-blue-800 mb-6">📁 File Transfer Cases</h1>
+
+    <!-- ✅ Filter Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Filter by District</label>
+        <select id="districtFilter" class="w-full border border-gray-300 rounded px-4 py-2">
+          <option value="">All Districts</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Filter by Officer</label>
+        <select id="officerFilter" class="w-full border border-gray-300 rounded px-4 py-2">
+          <option value="">All Officers</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+  </div>
+
+  <script>
+    const apiUrl = "https://script.google.com/macros/s/AKfycbxcFQ4imlTTGPj5ofwMdqfCMUXN7mLmE6IzIh7tpejE7Ov7w9PApF1etwZfmgZs9fq5/exec";
+    let originalData = [];
+
+	function createRemarkContent(text, limit = 100) {
+	  const container = document.createElement("div");
+	  container.classList.add("remark-container");
+
+	  const textSpan = document.createElement("div");
+	  textSpan.className = "text-transition max-h-16 overflow-hidden relative";
+	  textSpan.innerHTML = `<p class="whitespace-pre-line">${text}</p>`; // handle \n and long text
+	  container.appendChild(textSpan);
+
+	  const fade = document.createElement("div");
+	  fade.className = "absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none";
+	  textSpan.appendChild(fade);
+
+	  const toggleBtn = document.createElement("button");
+	  toggleBtn.textContent = "Read More";
+	  toggleBtn.className = "text-blue-600 ml-1 text-sm mt-2 focus:outline-none";
+	  container.appendChild(toggleBtn);
+
+	  let expanded = false;
+
+	  toggleBtn.addEventListener("click", () => {
+	    expanded = !expanded;
+	    if (expanded) {
+	      textSpan.classList.remove("max-h-16", "overflow-hidden");
+	      fade.classList.add("hidden");
+	      toggleBtn.textContent = "Show Less";
+	    } else {
+	      textSpan.classList.add("max-h-16", "overflow-hidden");
+	      fade.classList.remove("hidden");
+	      toggleBtn.textContent = "Read More";
+	    }
+	  });
+
+	  return container;
+	}
+
+    async function fetchData() {
+      try {
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        originalData = data;
+        populateFilters(data); // ✅ Fill filter options
+        renderCards(data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    function populateFilters(data) {
+      const districts = [...new Set(data.map(item => item.district).filter(Boolean))].sort();
+      const officers = [...new Set(data.map(item => item.officer).filter(Boolean))].sort();
+
+      const districtSelect = document.getElementById("districtFilter");
+      const officerSelect = document.getElementById("officerFilter");
+
+      districts.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        districtSelect.appendChild(opt);
+      });
+
+      officers.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o;
+        opt.textContent = o;
+        officerSelect.appendChild(opt);
+      });
+
+      districtSelect.addEventListener("change", applyFilters);
+      officerSelect.addEventListener("change", applyFilters);
+    }
+
+    function applyFilters() {
+      const selectedDistrict = document.getElementById("districtFilter").value;
+      const selectedOfficer = document.getElementById("officerFilter").value;
+
+      const filtered = originalData.filter(item =>
+        (selectedDistrict === "" || item.district === selectedDistrict) &&
+        (selectedOfficer === "" || item.officer === selectedOfficer)
+      );
+
+      renderCards(filtered);
+    }
+
+    function renderCards(data) {
+      const container = document.getElementById("results");
+      container.innerHTML = "";
+
+      data.forEach(item => {
+        const card = document.createElement("div");
+	card.className = "bg-white rounded-lg shadow p-4 hover:shadow-md transition-all text-sm";
+
+        card.innerHTML = `
+	<div class="space-y-2">
+	  <div class="flex flex-col gap-1">
+	    <div class="font-semibold text-blue-700 truncate">${item.name}</div>
+	    <div class="text-gray-600 text-xs">📍 ${item.district} | 📞 ${item.contact}</div>
+	    <div class="text-gray-600 text-xs">👮 ${item.officer}</div>
+	  </div>
+            <div>
+              <p class="text-gray-700 font-medium">Remark:</p>
+              <div class="remark-preview bg-gray-100 p-3 rounded"></div>
+            </div>
+            <div>
+              <label class="block text-gray-700 font-medium">Case Status:</label>
+              <select class="status mt-1 block w-full border rounded px-3 py-2" data-uid="${item.uid}">
+                <option value="">-- Select Status --</option>
+                <option value="Cancel in Field">Cancel in Field</option>
+                <option value="File Transfer">File Transfer</option>
+                <option value="Back To Telecaller">Back To Telecaller</option>
+                <option value="No Need">No Need</option>
+                <option value="Hot Follow Up">Hot Follow Up</option>
+              </select>
+            </div>
+            <div class="remark-field hidden">
+              <label class="block text-gray-700 font-medium">Additional Remark:</label>
+              <textarea class="remark mt-1 block w-full border rounded px-3 py-2" rows="2" placeholder="Enter your remark..."></textarea>
+            </div>
+          </div>
+          <button class="submit mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Submit</button>
+        `;
+
+        const previewContainer = card.querySelector(".remark-preview");
+        previewContainer.appendChild(createRemarkContent(item.remark || ""));
+
+        const select = card.querySelector(".status");
+        const remarkField = card.querySelector(".remark-field");
+        const remarkInput = card.querySelector(".remark");
+        const submitBtn = card.querySelector(".submit");
+
+        select.addEventListener("change", () => {
+          const selected = select.value;
+          if (["Cancel in Field", "No Need", "Hot Follow Up", "File Transfer"].includes(selected)) {
+            remarkField.classList.remove("hidden");
+          } else {
+            remarkField.classList.add("hidden");
+          }
+        });
+
+        submitBtn.addEventListener("click", async () => {
+          const uid = select.getAttribute("data-uid");
+          const status = select.value;
+          const extraRemark = remarkInput?.value.trim() || "";
+
+          if (!status) {
+            alert("Please select a case status.");
+            return;
+          }
+
+          const bodyData = { uid, status, remark: extraRemark };
+
+          try {
+            await fetch(apiUrl, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(bodyData),
+            });
+
+            alert("Updated successfully.");
+            fetchData(); // Reload everything
+          } catch (error) {
+            console.error("Error submitting data:", error);
+            alert("An error occurred. Please try again.");
+          }
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    fetchData();
+  </script>
+</body>
+</html>
