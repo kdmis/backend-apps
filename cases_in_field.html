@@ -10,9 +10,9 @@
       transition: max-height 0.4s ease-in-out;
       overflow: hidden;
     }
-  .text-transition {
-    transition: max-height 0.3s ease;
-  }
+    .text-transition {
+      transition: max-height 0.3s ease;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
@@ -43,48 +43,48 @@
     const apiUrl = "https://script.google.com/macros/s/AKfycbxcFQ4imlTTGPj5ofwMdqfCMUXN7mLmE6IzIh7tpejE7Ov7w9PApF1etwZfmgZs9fq5/exec";
     let originalData = [];
 
-	function createRemarkContent(text, limit = 100) {
-	  const container = document.createElement("div");
-	  container.classList.add("remark-container");
+    function createRemarkContent(text, limit = 100) {
+      const container = document.createElement("div");
+      container.classList.add("remark-container");
 
-	  const textSpan = document.createElement("div");
-	  textSpan.className = "text-transition max-h-16 overflow-hidden relative";
-	  textSpan.innerHTML = `<p class="whitespace-pre-line">${text}</p>`; // handle \n and long text
-	  container.appendChild(textSpan);
+      const textSpan = document.createElement("div");
+      textSpan.className = "text-transition max-h-16 overflow-hidden relative";
+      textSpan.innerHTML = `<p class="whitespace-pre-line">${text}</p>`;
+      container.appendChild(textSpan);
 
-	  const fade = document.createElement("div");
-	  fade.className = "absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none";
-	  textSpan.appendChild(fade);
+      const fade = document.createElement("div");
+      fade.className = "absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none";
+      textSpan.appendChild(fade);
 
-	  const toggleBtn = document.createElement("button");
-	  toggleBtn.textContent = "Read More";
-	  toggleBtn.className = "text-blue-600 ml-1 text-sm mt-2 focus:outline-none";
-	  container.appendChild(toggleBtn);
+      const toggleBtn = document.createElement("button");
+      toggleBtn.textContent = "Read More";
+      toggleBtn.className = "text-blue-600 ml-1 text-sm mt-2 focus:outline-none";
+      container.appendChild(toggleBtn);
 
-	  let expanded = false;
+      let expanded = false;
 
-	  toggleBtn.addEventListener("click", () => {
-	    expanded = !expanded;
-	    if (expanded) {
-	      textSpan.classList.remove("max-h-16", "overflow-hidden");
-	      fade.classList.add("hidden");
-	      toggleBtn.textContent = "Show Less";
-	    } else {
-	      textSpan.classList.add("max-h-16", "overflow-hidden");
-	      fade.classList.remove("hidden");
-	      toggleBtn.textContent = "Read More";
-	    }
-	  });
+      toggleBtn.addEventListener("click", () => {
+        expanded = !expanded;
+        if (expanded) {
+          textSpan.classList.remove("max-h-16", "overflow-hidden");
+          fade.classList.add("hidden");
+          toggleBtn.textContent = "Show Less";
+        } else {
+          textSpan.classList.add("max-h-16", "overflow-hidden");
+          fade.classList.remove("hidden");
+          toggleBtn.textContent = "Read More";
+        }
+      });
 
-	  return container;
-	}
+      return container;
+    }
 
     async function fetchData() {
       try {
         const res = await fetch(apiUrl);
         const data = await res.json();
         originalData = data;
-        populateFilters(data); // ✅ Fill filter options
+        populateFilters(data);
         renderCards(data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -132,38 +132,43 @@
       const container = document.getElementById("results");
       container.innerHTML = "";
 
+      // Today's date in dd-mm-yyyy
+      const today = new Date();
+      const todayStr = today.toLocaleDateString('en-GB').split("/").join("-");
+
       data.forEach(item => {
+        const highlight = item.remark && item.remark.includes(todayStr);
         const card = document.createElement("div");
-	card.className = "bg-white rounded-lg shadow p-4 hover:shadow-md transition-all text-sm";
+        card.className = `rounded-lg shadow p-4 hover:shadow-md transition-all text-sm ${highlight ? 'bg-green-100 border border-green-400' : 'bg-white'}`;
 
         card.innerHTML = `
-	<div class="space-y-2">
-	  <div class="flex flex-col gap-1">
-	    <div class="font-semibold text-blue-700 truncate">${item.name}</div>
-	    <div class="text-gray-600 text-xs">📍 ${item.district} | 📞 ${item.contact}</div>
-	    <div class="text-gray-600 text-xs">👮 ${item.officer}</div>
-	  </div>
-            <div>
-              <p class="text-gray-700 font-medium">Remark:</p>
-              <div class="remark-preview bg-gray-100 p-3 rounded"></div>
-            </div>
-            <div>
-              <label class="block text-gray-700 font-medium">Case Status:</label>
-              <select class="status mt-1 block w-full border rounded px-3 py-2" data-uid="${item.uid}">
-                <option value="">-- Select Status --</option>
-                <option value="Cancel in Field">Cancel in Field</option>
-                <option value="File Transfer">File Transfer</option>
-                <option value="Back To Telecaller">Back To Telecaller</option>
-                <option value="No Need">No Need</option>
-                <option value="Hot Follow Up">Hot Follow Up</option>
-              </select>
-            </div>
-            <div class="remark-field hidden">
-              <label class="block text-gray-700 font-medium">Additional Remark:</label>
-              <textarea class="remark mt-1 block w-full border rounded px-3 py-2" rows="2" placeholder="Enter your remark..."></textarea>
-            </div>
+        <div class="space-y-2">
+          <div class="flex flex-col gap-1">
+            <div class="font-semibold text-blue-700 truncate">${item.name}</div>
+            <div class="text-gray-600 text-xs">📍 ${item.district} | 📞 ${item.contact}</div>
+            <div class="text-gray-600 text-xs">👮 ${item.officer}</div>
           </div>
-          <button class="submit mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Submit</button>
+          <div>
+            <p class="text-gray-700 font-medium">Remark:</p>
+            <div class="remark-preview bg-gray-100 p-3 rounded"></div>
+          </div>
+          <div>
+            <label class="block text-gray-700 font-medium">Case Status:</label>
+            <select class="status mt-1 block w-full border rounded px-3 py-2" data-uid="${item.uid}">
+              <option value="">-- Select Status --</option>
+              <option value="Cancel in Field">Cancel in Field</option>
+              <option value="File Transfer">File Transfer</option>
+              <option value="Back To Telecaller">Back To Telecaller</option>
+              <option value="No Need">No Need</option>
+              <option value="Hot Follow Up">Hot Follow Up</option>
+            </select>
+          </div>
+          <div class="remark-field hidden">
+            <label class="block text-gray-700 font-medium">Additional Remark:</label>
+            <textarea class="remark mt-1 block w-full border rounded px-3 py-2" rows="2" placeholder="Enter your remark..."></textarea>
+          </div>
+        </div>
+        <button class="submit mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Submit</button>
         `;
 
         const previewContainer = card.querySelector(".remark-preview");
