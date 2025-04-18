@@ -112,7 +112,7 @@
   </div>
 
   <script>
-    const webAppUrl = 'https://script.google.com/macros/s/AKfycbwvhvwYiv-HiWVYofffCzn04wSZOoKmP3PmAAYPfuubzXDbdtBHKuOTaqpCTDWbIbKqLQ/exec';
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbzXgH9WawJMdmK2hsl-BMpPM5rt1wEZ0EFWquv2jLWuCaw6fs9J-oEVWH3gk0N37U7c-Q/exec';
     let allData = [];
     let currentSort = { column: null, asc: true };
     const tbody = document.getElementById('tableBody');
@@ -129,15 +129,15 @@
           <td>${row.district}</td>
           <td>${row.officer}</td>
           <td>${row.type}</td>
-          <td>
-            ${row.stampAvailable.map(val =>
-              val === 'Yes'
-                ? `<span class="badge yes" onclick="handleYesClick('${row.account}', this)">
-                    ${val}
-                  </span>`
-                : `<span class="badge no">${val}</span>`
-            ).join(' ')}
-          </td>
+	  <td>
+	    ${(Array.isArray(row.stampAvailable) ? row.stampAvailable : [row.stampAvailable || ''])
+	    .map(val =>
+	    val === 'Yes'
+	    ? `<span class="badge yes" onclick="handleYesClick('${row.account}', this)">${val}</span>`
+	    : `<span class="badge no">${val}</span>`
+	    ).join(' ')
+	    }
+	  </td>
         `;
         tbody.appendChild(tr);
       });
