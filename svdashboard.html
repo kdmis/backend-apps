@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schools Visit Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        .card {
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .agent-card {
+            perspective: 1000px;
+        }
+        .agent-card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .agent-card:hover .agent-card-inner {
+            transform: rotateY(5deg);
+        }
+        .loader {
+            border-top-color: #3498db;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 640px) {
+            .responsive-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold text-center md:text-left">Schools Visit Dashboard</h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- Loading State -->
+        <div id="loading" class="flex flex-col items-center justify-center py-20">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            <h2 class="text-center text-xl font-semibold">Loading dashboard data...</h2>
+            <p class="text-center text-gray-500">Please wait while we fetch the latest information.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-6" role="alert">
+            <p class="font-bold">Error</p>
+            <p>Failed to load dashboard data. Please refresh the page or try again later.</p>
+        </div>
+
+        <!-- Content when data is loaded -->
+        <div id="content" class="hidden">
+            <!-- Agent Cards -->
+            <section id="agent-cards" class="mb-12">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Field Officers</h2>
+                <div id="agents-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Agent cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Agent Details (initially hidden) -->
+            <section id="agent-details" class="hidden">
+                <button id="back-button" class="mb-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Back to All Agents
+                </button>
+                
+                <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                    <h2 id="agent-name" class="text-2xl font-bold mb-4 text-gray-800"></h2>
+                    
+                    <!-- Summary Section -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Performance Summary</h3>
+                        <div class="overflow-x-auto responsive-table">
+                            <table class="min-w-full bg-white border border-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-700">Date</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-sm font-medium text-gray-700">Schools Visited</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summary-table-body">
+                                    <!-- Summary data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <button id="show-details-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Show Detailed Performance
+                    </button>
+                </div>
+
+                <!-- Detailed Performance Section (initially hidden) -->
+                <div id="detailed-performance" class="hidden bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-semibold mb-6 text-gray-700">Detailed Performance</h3>
+                    
+                    <!-- Date Selector -->
+                    <div class="mb-6">
+                        <label for="date-selector" class="block text-sm font-medium text-gray-700 mb-2">Select Date:</label>
+                        <select id="date-selector" class="block w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <!-- Dates will be inserted here -->
+                        </select>
+                    </div>
+                    
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-blue-50 rounded-lg p-4 shadow">
+                            <h4 class="text-sm font-medium text-blue-800 mb-2">First Visit Time</h4>
+                            <p id="first-visit-time" class="text-2xl font-bold text-blue-900"></p>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4 shadow">
+                            <h4 class="text-sm font-medium text-green-800 mb-2">Schools Visited</h4>
+                            <p id="schools-count" class="text-2xl font-bold text-green-900"></p>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-4 shadow">
+                            <h4 class="text-sm font-medium text-purple-800 mb-2">Total Distance (km)</h4>
+                            <p id="total-distance" class="text-2xl font-bold text-purple-900"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Schools Details -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium mb-4 text-gray-700">Schools Details</h4>
+                        <div class="overflow-x-auto responsive-table">
+                            <table class="min-w-full bg-white border border-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">School Name</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">First Entry</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">Last Entry</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">Time Spent (min)</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">Distance to Next (km)</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">Teachers Met</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-700">Valid Contacts</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schools-table-body">
+                                    <!-- Schools data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Chart -->
+                    <div>
+                        <h4 class="text-lg font-medium mb-4 text-gray-700">Time Spent at Each School</h4>
+                        <div class="h-64">
+                            <canvas id="time-spent-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-4 mt-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 Schools Visit Dashboard</p>
+        </div>
+    </footer>
+
+    <script>
+    // Dashboard state
+    let dashboardData = null;
+    let currentAgent = null;
+    let currentDate = null;
+    let timeSpentChart = null;
+    
+    // DOM elements
+    const loadingElement = document.getElementById('loading');
+    const errorElement = document.getElementById('error');
+    const contentElement = document.getElementById('content');
+    const agentsContainer = document.getElementById('agents-container');
+    const agentDetails = document.getElementById('agent-details');
+    const agentNameElement = document.getElementById('agent-name');
+    const summaryTableBody = document.getElementById('summary-table-body');
+    const showDetailsButton = document.getElementById('show-details-button');
+    const detailedPerformance = document.getElementById('detailed-performance');
+    const dateSelector = document.getElementById('date-selector');
+    const firstVisitTimeElement = document.getElementById('first-visit-time');
+    const schoolsCountElement = document.getElementById('schools-count');
+    const totalDistanceElement = document.getElementById('total-distance');
+    const schoolsTableBody = document.getElementById('schools-table-body');
+    const backButton = document.getElementById('back-button');
+
+    // Fetch data from the Google Apps Script
+    async function fetchData() {
+        try {
+            const response = await fetch('https://script.google.com/macros/s/AKfycbzaOMGFcLbG8vvwkqnYTMtNOIIM0RhvfGFDyw-9_kHCHiFU7Ydg3IHH_ooKJ9umP2xc/exec');
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            dashboardData = await response.json();
+
+            // Process and display data
+            renderDashboard();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            loadingElement.classList.add('hidden');
+            errorElement.classList.remove('hidden');
+        }
+    }
+        
+        // Render dashboard with the fetched data
+        function renderDashboard() {
+            loadingElement.classList.add('hidden');
+            contentElement.classList.remove('hidden');
+            
+            // Get unique agents and render cards
+            const agents = Object.keys(dashboardData.summary);
+            renderAgentCards(agents);
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+        
+        // Render agent cards
+        function renderAgentCards(agents) {
+            agentsContainer.innerHTML = '';
+            
+            agents.forEach(agent => {
+                const agentSummary = dashboardData.summary[agent];
+                const totalSchools = agentSummary.reduce((sum, entry) => sum + entry.totalSchools, 0);
+                
+                const cardHtml = `
+                    <div class="agent-card cursor-pointer" data-agent="${agent}">
+                        <div class="agent-card-inner bg-white rounded-lg shadow-lg overflow-hidden h-full">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold mb-2 text-blue-800">${agent}</h3>
+                                <div class="text-gray-600 mb-4">
+                                    <p><span class="font-semibold">Total Visits:</span> ${agentSummary.length} days</p>
+                                    <p><span class="font-semibold">Total Schools:</span> ${totalSchools}</p>
+                                </div>
+                                <div class="mt-4 text-blue-600 font-medium">
+                                    Click to view details
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                agentsContainer.innerHTML += cardHtml;
+            });
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Agent card click event
+            document.querySelectorAll('.agent-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const agent = this.dataset.agent;
+                    showAgentDetails(agent);
+                });
+            });
+            
+            // Back button click event
+            backButton.addEventListener('click', function() {
+                agentDetails.classList.add('hidden');
+                document.getElementById('agent-cards').classList.remove('hidden');
+                currentAgent = null;
+                
+                // Destroy chart if it exists
+                if (timeSpentChart) {
+                    timeSpentChart.destroy();
+                    timeSpentChart = null;
+                }
+            });
+            
+            // Show details button click event
+            showDetailsButton.addEventListener('click', function() {
+                detailedPerformance.classList.remove('hidden');
+                this.classList.add('hidden');
+                
+                // Initialize date selector and show details for first date
+                const dates = dashboardData.summary[currentAgent].map(entry => entry.date);
+                initializeDateSelector(dates);
+                showDetailedPerformance(dates[0]);
+            });
+            
+            // Date selector change event
+            dateSelector.addEventListener('change', function() {
+                const selectedDate = this.value;
+                showDetailedPerformance(selectedDate);
+            });
+        }
+        
+        // Show agent details
+        function showAgentDetails(agent) {
+            currentAgent = agent;
+            document.getElementById('agent-cards').classList.add('hidden');
+            agentDetails.classList.remove('hidden');
+            detailedPerformance.classList.add('hidden');
+            showDetailsButton.classList.remove('hidden');
+            
+            // Set agent name
+            agentNameElement.textContent = agent;
+            
+            // Render summary table
+            renderSummaryTable(agent);
+        }
+        
+        // Render summary table
+        function renderSummaryTable(agent) {
+            const summaryData = dashboardData.summary[agent];
+            summaryTableBody.innerHTML = '';
+            
+            summaryData.forEach(entry => {
+                // Calculate total contacts for this date
+                const dateDetails = dashboardData.details.find(d => d.agent === agent && d.date === entry.date);
+                const totalContacts = dateDetails ? dateDetails.schools.reduce((sum, school) => sum + school.validContactCount, 0) : 0;
+                
+                const row = `
+                    <tr>
+                        <td class="py-2 px-4 border-b border-gray-200">${formatDate(entry.date)}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${entry.totalSchools} schools / ${totalContacts} contacts</td>
+                    </tr>
+                `;
+                summaryTableBody.innerHTML += row;
+            });
+        }
+        
+        // Initialize date selector
+        function initializeDateSelector(dates) {
+            dateSelector.innerHTML = '';
+            
+            dates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = formatDate(date);
+                dateSelector.appendChild(option);
+            });
+        }
+        
+        // Show detailed performance for a specific date
+        function showDetailedPerformance(date) {
+            currentDate = date;
+            
+            // Find the details for this agent and date
+            const details = dashboardData.details.find(d => d.agent === currentAgent && d.date === date);
+            
+            if (details) {
+                // Update metrics
+                firstVisitTimeElement.textContent = details.firstVisitTime;
+                schoolsCountElement.textContent = details.schools.length;
+                
+                // Calculate total distance
+                const totalDistance = details.schools.reduce((sum, school) => sum + school.distanceTravelled, 0);
+                totalDistanceElement.textContent = totalDistance.toFixed(1);
+                
+                // Render schools table
+                renderSchoolsTable(details.schools);
+                
+                // Render chart
+                renderTimeSpentChart(details.schools);
+            }
+        }
+        
+        // Render schools table
+        function renderSchoolsTable(schools) {
+            schoolsTableBody.innerHTML = '';
+            
+            schools.forEach(school => {
+                const row = `
+                    <tr>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.schoolName}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.firstEntryTime}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.lastEntryTime}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.timeSpentMinutes}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.distanceTravelled}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.teacherCount}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${school.validContactCount}</td>
+                    </tr>
+                `;
+                schoolsTableBody.innerHTML += row;
+            });
+        }
+        
+        // Render time spent chart
+        function renderTimeSpentChart(schools) {
+            const ctx = document.getElementById('time-spent-chart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (timeSpentChart) {
+                timeSpentChart.destroy();
+            }
+            
+            // Prepare data
+            const labels = schools.map(school => school.schoolName);
+            const timeSpent = schools.map(school => school.timeSpentMinutes);
+            
+            // Create new chart
+            timeSpentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Time Spent (minutes)',
+                        data: timeSpent,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Minutes'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Format date (YYYY-MM-DD to more readable format)
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+        
+        // Initialize the dashboard
+        fetchData();
+    </script>
+</body>
+</html>
