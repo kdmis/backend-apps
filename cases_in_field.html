@@ -13,6 +13,22 @@
     .text-transition {
       transition: max-height 0.3s ease;
     }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 300px;
+      background-color: #f0f7ff;
+      border-right: 1px solid #e2e8f0;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    .sidebar-section {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
@@ -39,18 +55,38 @@
     <div id="results" class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
   </div>
 
-<div class="fixed top-0 left-0 h-full w-64 bg-blue-100 border-r border-gray-300 p-4 overflow-y-auto shadow z-10">
-  <h2 class="text-xl font-bold text-blue-900 mb-4">📌 Visits for List</h2>
-  <ul id="district2List" class="space-y-2 text-gray-800 text-sm">
-    <!-- District2 items will be injected here -->
-    <li class="text-gray-500 italic">Loading...</li>
-  </ul>
-</div>
+  <!-- Enhanced Sidebar with Two Sections -->
+  <div class="sidebar">
+    <!-- Section 1: Visits List -->
+    <div class="sidebar-section">
+      <h2 class="text-xl font-bold text-blue-900 mb-4">📌 Visits for List</h2>
+      <ul id="district2List" class="space-y-2 text-gray-800 text-sm">
+        <!-- District2 items will be injected here -->
+        <li class="text-gray-500 italic">Loading...</li>
+      </ul>
+    </div>
+    
+    <!-- Section 2: Documents Required -->
+    <div class="sidebar-section">
+      <h2 class="text-xl font-bold text-blue-900 mb-4">📄 Documents Required</h2>
+      <div id="docsRequiredContainer" class="bg-white rounded-lg shadow p-3 mb-4">
+        <p class="text-gray-500 italic text-sm mb-2">Select a case to view required documents</p>
+      </div>
+      <div id="docsList" class="space-y-2 mb-4">
+        <!-- Documents list will be injected here -->
+      </div>
+      <button id="markReceivingBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        Mark Receiving
+      </button>
+    </div>
+  </div>
 
   <script>
-    document.body.style.marginLeft = '16rem'; // pushes main content to the right
+    document.body.style.marginLeft = '320px'; // pushes main content to the right (adjusted for wider sidebar)
     const apiUrl = "https://script.google.com/macros/s/AKfycbxcFQ4imlTTGPj5ofwMdqfCMUXN7mLmE6IzIh7tpejE7Ov7w9PApF1etwZfmgZs9fq5/exec";
+    const docsApiUrl = "https://script.google.com/macros/s/AKfycbw_MQ4rf1P3MEyF1MHUNO_NsK0Zk25sPKTPVY303xiYSxF2y7P81RJh8RhgMLOFZvmc/exec"; // Replace with your new script ID
     let originalData = [];
+    let currentCaseId = null;
 
     function createRemarkContent(text, limit = 100) {
       const container = document.createElement("div");
@@ -137,32 +173,169 @@
       renderCards(filtered);
     }
 
-  const district2Api = "https://script.google.com/macros/s/AKfycbxCbiLMvH0JzhEC0SKag2h9d3J0eouxBWo7ZfbkQqk4U_Z7KXnJY5bgz3IbKLykmiUf/exec";
+    const district2Api = "https://script.google.com/macros/s/AKfycbxCbiLMvH0JzhEC0SKag2h9d3J0eouxBWo7ZfbkQqk4U_Z7KXnJY5bgz3IbKLykmiUf/exec";
 
-  async function loadDistrict2Sidebar() {
-    const sidebarList = document.getElementById("district2List");
-    try {
-      const res = await fetch(district2Api);
-      const data = await res.json();
-      const district2s = [...new Set(data.map(d => d.District2).filter(Boolean))];
+    async function loadDistrict2Sidebar() {
+      const sidebarList = document.getElementById("district2List");
+      try {
+        const res = await fetch(district2Api);
+        const data = await res.json();
+        const district2s = [...new Set(data.map(d => d.District2).filter(Boolean))];
 
-      sidebarList.innerHTML = "";
+        sidebarList.innerHTML = "";
 
-      district2s.forEach(d2 => {
-        const li = document.createElement("li");
-        li.className = "hover:bg-blue-200 rounded px-2 py-1 cursor-pointer";
-        li.textContent = d2;
-        sidebarList.appendChild(li);
-      });
-    } catch (err) {
-      sidebarList.innerHTML = "<li class='text-red-500'>Failed to load District2</li>";
-      console.error("Sidebar fetch error:", err);
+        district2s.forEach(d2 => {
+          const li = document.createElement("li");
+          li.className = "hover:bg-blue-200 rounded px-2 py-1 cursor-pointer";
+          li.textContent = d2;
+          sidebarList.appendChild(li);
+        });
+      } catch (err) {
+        sidebarList.innerHTML = "<li class='text-red-500'>Failed to load District2</li>";
+        console.error("Sidebar fetch error:", err);
+      }
     }
-  }
 
-  loadDistrict2Sidebar();
+    // Function to fetch pending documents data
+    async function fetchPendingDocs() {
+      try {
+        const res = await fetch(docsApiUrl);
+        const data = await res.json();
+        return data.filter(item => item.docsPending); // Only return items with pending docs
+      } catch (error) {
+        console.error("Error fetching pending docs:", error);
+        return [];
+      }
+    }
 
+    // Function to display cases with pending documents
+    async function loadPendingDocsCases() {
+      const docsList = document.getElementById("docsList");
+      docsList.innerHTML = "<p class='text-gray-500 italic'>Loading documents...</p>";
+      
+      try {
+        const pendingDocsData = await fetchPendingDocs();
+        
+        if (pendingDocsData.length === 0) {
+          docsList.innerHTML = "<p class='text-gray-500 italic'>No pending documents found</p>";
+          return;
+        }
+        
+        docsList.innerHTML = "";
+        
+        // Create a list of cases with pending docs
+        pendingDocsData.forEach(item => {
+          const caseElement = document.createElement("div");
+          caseElement.className = "bg-blue-50 p-3 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors";
+          caseElement.innerHTML = `
+            <p class="font-medium text-blue-800">${item.name || 'Unknown'}</p>
+            <p class="text-sm text-gray-600">ID: ${item.id}</p>
+            <p class="text-sm text-gray-600">District: ${item.district || 'N/A'}</p>
+          `;
+          
+          caseElement.addEventListener("click", () => {
+            // Display the pending documents for this case
+            displayPendingDocs(item);
+            
+            // Highlight the selected case
+            document.querySelectorAll("#docsList > div").forEach(el => {
+              el.classList.remove("bg-blue-200", "border-blue-500", "border-2");
+            });
+            caseElement.classList.add("bg-blue-200", "border-blue-500", "border-2");
+          });
+          
+          docsList.appendChild(caseElement);
+        });
+        
+      } catch (error) {
+        docsList.innerHTML = "<p class='text-red-500'>Failed to load documents</p>";
+        console.error("Error loading pending docs cases:", error);
+      }
+    }
 
+    // Function to display pending documents for a specific case
+    function displayPendingDocs(caseData) {
+      const container = document.getElementById("docsRequiredContainer");
+      currentCaseId = caseData.id;
+      
+      // Parse the pending docs (could be comma-separated or another format)
+      let pendingDocs = [];
+      if (typeof caseData.docsPending === 'string') {
+        pendingDocs = caseData.docsPending.split(',').map(doc => doc.trim()).filter(Boolean);
+      } else if (Array.isArray(caseData.docsPending)) {
+        pendingDocs = caseData.docsPending;
+      }
+      
+      container.innerHTML = `
+        <div class="mb-3">
+          <h3 class="font-semibold text-lg text-blue-700">${caseData.name || 'Case'}</h3>
+          <p class="text-sm text-gray-600">ID: ${caseData.id} | Mobile: ${caseData.mobile || 'N/A'}</p>
+          <p class="text-sm text-gray-600">District: ${caseData.district || 'N/A'} | By: ${caseData.filledBy || 'N/A'}</p>
+        </div>
+        <div class="mt-3">
+          <p class="font-medium text-gray-700 mb-2">Required Documents:</p>
+          <div class="pl-2">
+            ${pendingDocs.length > 0 ? 
+              pendingDocs.map((doc, index) => `
+                <div class="flex items-center space-x-2 mb-2">
+                  <input type="checkbox" id="doc-${index}" class="doc-checkbox w-4 h-4 text-blue-600" data-doc="${doc}">
+                  <label for="doc-${index}" class="text-sm">${doc}</label>
+                </div>
+              `).join('') : 
+              '<p class="text-sm italic">No specific documents listed</p>'
+            }
+          </div>
+        </div>
+      `;
+      
+      // Enable the mark receiving button
+      document.getElementById("markReceivingBtn").disabled = false;
+    }
+
+    // Function to handle marking document receipt
+    document.getElementById("markReceivingBtn").addEventListener("click", async () => {
+      if (!currentCaseId) {
+        alert("Please select a case first");
+        return;
+      }
+      
+      // Get all checked documents
+      const checkedDocs = Array.from(document.querySelectorAll('.doc-checkbox:checked'))
+        .map(checkbox => checkbox.getAttribute('data-doc'));
+      
+      if (checkedDocs.length === 0) {
+        alert("Please select at least one document");
+        return;
+      }
+      
+      try {
+        const response = await fetch(docsApiUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "markReceived",
+            id: currentCaseId,
+            receivedDocs: checkedDocs
+          }),
+        });
+        
+        alert("Documents marked as received successfully!");
+        
+        // Refresh the pending docs list
+        loadPendingDocsCases();
+        
+        // Reset the current view
+        document.getElementById("docsRequiredContainer").innerHTML = 
+          "<p class='text-gray-500 italic text-sm mb-2'>Select a case to view required documents</p>";
+        document.getElementById("markReceivingBtn").disabled = true;
+        currentCaseId = null;
+        
+      } catch (error) {
+        console.error("Error marking documents as received:", error);
+        alert("An error occurred. Please try again.");
+      }
+    });
 
     function renderCards(data) {
       const container = document.getElementById("results");
@@ -256,7 +429,10 @@
       });
     }
 
+    // Initialize everything
     fetchData();
+    loadDistrict2Sidebar();
+    loadPendingDocsCases();
   </script>
 </body>
 </html>
