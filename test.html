@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTGS Form Viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      background-color: #1a5276;
+      color: white;
+      padding: 20px;
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .search-container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .search-form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .search-form input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    .search-form button {
+      background-color: #2980b9;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    
+    .search-form button:hover {
+      background-color: #1a5276;
+    }
+    
+    .content {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: none;
+    }
+    
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #2980b9;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      color: #c0392b;
+      background-color: #fadbd8;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .success-message {
+      color: #27ae60;
+      background-color: #d4efdf;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .tabs {
+      display: flex;
+      background-color: #f1f1f1;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab-button {
+      background-color: inherit;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 14px 20px;
+      transition: background-color 0.3s;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    
+    .tab-button:hover {
+      background-color: #ddd;
+    }
+    
+    .tab-button.active {
+      background-color: #2980b9;
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 20px;
+      animation: fadeIn 0.5s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .card {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom:  10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    
+    .info-row {
+      display: flex;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .info-label {
+      width: 40%;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .info-value {
+      width: 40%;
+      color: #333;
+    }
+    
+    .verification-controls {
+      width: 20%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    
+    .verification-icon {
+      display: inline-block;
+      margin-left: 5px;
+      cursor: pointer;
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+    
+    .verification-icon:hover {
+      transform: scale(1.2);
+    }
+    
+    .correct-icon {
+      color: #27ae60;
+    }
+    
+    .incorrect-icon {
+      color: #e74c3c;
+    }
+    
+    .alert {
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    .alert-warning {
+      background-color: #fcf8e3;
+      border: 1px solid #faebcc;
+      color: #8a6d3b;
+    }
+    
+    .rtgs-number {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+      color: #2980b9;
+    }
+    
+    .correction-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .correction-form {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .correction-form h3 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    .button-group {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .cancel-button {
+      background-color: #95a5a6;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .save-button {
+      background-color: #2980b9;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .verification-status-icon {
+      margin-right: 5px;
+    }
+    
+    .verification-section {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .verification-section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 15px;
+    }
+    
+    .verification-summary {
+      padding: 15px;
+      background-color: #ecf0f1;
+      border-radius: 4px;
+    }
+    
+    .verification-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 15px;
+    }
+    
+    .submit-verification-button {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    
+    .submit-verification-button:hover {
+      background-color: #219653;
+    }
+    
+    .field-correct {
+      background-color: rgba(46, 204, 113, 0.1);
+    }
+    
+    .field-incorrect {
+      background-color: rgba(231, 76, 60, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      .search-form {
+        flex-direction: column;
+      }
+      
+      .search-form input,
+      .search-form button {
+        width: 100%;
+      }
+      
+      .info-label,
+      .info-value {
+        width: 100%;
+      }
+      
+      .verification-controls {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 5px;
+      }
+      
+      .tabs {
+        flex-wrap: wrap;
+      }
+      
+      .tab-button {
+        padding: 10px 15px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>RTGS Form Viewer</h1>
+    </div>
+    
+    <div class="search-container">
+      <div class="search-form">
+        <input type="text" id="formNoInput" placeholder="Enter Form No." required>
+        <button type="button" id="searchButton">Display RTGS Form</button>
+      </div>
+    </div>
+    
+    <div class="error-message" id="errorMessage"></div>
+    <div class="success-message" id="successMessage"></div>
+    
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <p>Loading form data...</p>
+    </div>
+    
+    <div class="content" id="formContent">
+      <div class="rtgs-number" id="formNoDisplay"></div>
+      
+      <div class="tabs">
+        <button class="tab-button active" data-tab="applicantDetails">Applicant Details</button>
+        <button class="tab-button" data-tab="loanDetails">Loan Details</button>
+        <button class="tab-button" data-tab="otherDetails">Other Details</button>
+        <button class="tab-button" data-tab="makerChecker">Maker Checker</button>
+      </div>
+      
+      <div id="applicantDetails" class="tab-content active">
+        <div class="card">
+          <div class="card-title">Personal Information</div>
+          <div class="info-row" data-field="applicantName">
+            <div class="info-label">Applicant's Name:</div>
+            <div class="info-value" id="applicantName">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="designation">
+            <div class="info-label">Designation:</div>
+            <div class="info-value" id="designation">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="mobile">
+            <div class="info-label">Mobile:</div>
+            <div class="info-value" id="mobile">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="school">
+            <div class="info-label">School:</div>
+            <div class="info-value" id="school">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="district">
+            <div class="info-label">District:</div>
+            <div class="info-value" id="district">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="block">
+            <div class="info-label">Block:</div>
+            <div class="info-value" id="block">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Salary Structure</div>
+          <div class="info-row" data-field="totalSalary">
+            <div class="info-label">Total Salary:</div>
+            <div class="info-value" id="totalSalary">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="deductionsAll">
+            <div class="info-label">Deductions:</div>
+            <div class="info-value" id="deductionsAll">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="inhandSalary">
+            <div class="info-label">In-hand Salary:</div>
+            <div class="info-value" id="inhandSalary">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="otherSourceOfIncome">
+            <div class="info-label">Other Sources of Income:</div>
+            <div class="info-value" id="otherSourceOfIncome">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Salary A/c Details</div>
+          <div class="info-row" data-field="bank">
+            <div class="info-label">Bank:</div>
+            <div class="info-value" id="bank">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="bankDistrict">
+            <div class="info-label">Bank District:</div>
+            <div class="info-value" id="bankDistrict">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="branch">
+            <div class="info-label">Branch:</div>
+            <div class="info-value" id="branch">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="salaryAcNo">
+            <div class="info-label">Salary A/c No:</div>
+            <div class="info-value" id="salaryAcNo">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="ifscCode">
+            <div class="info-label">IFSC Code:</div>
+            <div class="info-value" id="ifscCode">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="loanDetails" class="tab-content">
+        <div class="card">
+          <div class="card-title">Loan Information</div>
+          <div class="info-row" data-field="loanCategory">
+            <div class="info-label">Loan Category:</div>
+            <div class="info-value" id="loanCategory">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="loanDate">
+            <div class="info-label">Loan Date:</div>
+            <div class="info-value" id="loanDate">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="loanAmount">
+            <div class="info-label">Loan Amount:</div>
+            <div class="info-value" id="loanAmount">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="interestRate">
+            <div class="info-label">Interest Rate:</div>
+            <div class="info-value" id="interestRate">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="subtype">
+            <div class="info-label">Subtype:</div>
+            <div class="info-value" id="subtype">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="oldAccounts">
+            <div class="info-label">Old A/c Nos.:</div>
+            <div class="info-value" id="oldAccounts">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card" id="defaulterCard">
+          <div class="card-title">Defaulter Status</div>
+          <div class="info-row" data-field="defaulter">
+            <div class="info-label">Defaulter:</div>
+            <div class="info-value" id="defaulter">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Payment Details</div>
+          <div class="info-row" data-field="transferAmount">
+            <div class="info-label">Transfer Amount:</div>
+            <div class="info-value" id="transferAmount">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="fileChargeRate">
+            <div class="info-label">File Charge Rate:</div>
+            <div class="info-value" id="fileChargeRate">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="fileChargeAmount">
+            <div class="info-label">File Charge Amount:</div>
+            <div class="info-value" id="fileChargeAmount">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="otherDetails" class="tab-content">
+        <div class="card">
+          <div class="card-title">Processing Information</div>
+          <div class="info-row" data-field="referencePerson">
+            <div class="info-label">Reference Person:</div>
+            <div class="info-value" id="referencePerson">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+          <div class="info-row" data-field="fieldOfficer">
+            <div class="info-label">Field Officer:</div>
+            <div class="info-value" id="fieldOfficer">-</div>
+            <div class="verification-controls">
+              <span class="verification-icon correct-icon" title="Mark as Correct">✓</span>
+              <span class="verification-icon incorrect-icon" title="Mark as Incorrect">✗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="makerChecker" class="tab-content">
+        <div class="verification-section">
+          <div class="verification-section-title">Verification Summary</div>
+          <div class="verification-summary" id="verificationSummary">
+            <p>Please review all form fields and mark them as correct or incorrect by clicking the ✓ or ✗ icons. Any fields marked as incorrect will require corrections.</p>
+            <p>Statistics: <span id="totalFields">0</span> total fields, <span id="verifiedFields">0</span> verified (<span id="correctFields">0</span> correct, <span id="incorrectFields">0</span> incorrect)</p>
+          </div>
+          <div class="verification-actions">
+            <button type="button" id="submitVerificationButton" class="submit-verification-button">Submit Verification Results</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Correction Dialog -->
+  <div class="correction-dialog" id="correctionDialog">
+    <div class="correction-form">
+      <h3>Provide Correction</h3>
+      <div class="form-group">
+        <label>Field: <span id="fieldNameToCorrect"></span></label>
+        <p>Original Value: <span id="originalValueToCorrect"></span></p>
+      </div>
+      <div class="form-group">
+        <label for="correctionInput">Corrected Value:</label>
+        <input type="text" id="correctionInput" placeholder="Enter the correct value">
+      </div>
+      <div class="button-group">
+        <button type="button" id="cancelCorrectionButton" class="cancel-button">Cancel</button>
+        <button type="button" id="saveCorrectionButton" class="save-button">Save Correction</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchButton = document.getElementById('searchButton');
+      const formNoInput = document.getElementById('formNoInput');
+      const loader = document.getElementById('loader');
+      const errorMessage = document.getElementById('errorMessage');
+      const successMessage = document.getElementById('successMessage');
+      const formContent = document.getElementById('formContent');
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
+      const correctionDialog = document.getElementById('correctionDialog');
+      const fieldNameToCorrect = document.getElementById('fieldNameToCorrect');
+      const originalValueToCorrect = document.getElementById('originalValueToCorrect');
+      const correctionInput = document.getElementById('correctionInput');
+      const cancelCorrectionButton = document.getElementById('cancelCorrectionButton');
+      const saveCorrectionButton = document.getElementById('saveCorrectionButton');
+      const submitVerificationButton = document.getElementById('submitVerificationButton');
+      
+      // Store form data
+      let currentFormData = null;
+      let currentFormNo = null;
+      
+      // Store verification data
+      const verifications = {};
+      
+      // Tab switching functionality
+      tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          
+          // Remove active class from all tabs
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          
+          // Add active class to current tab
+          this.classList.add('active');
+          document.getElementById(tabId).classList.add('active');
+          
+          // Update verification summary if maker checker tab is selected
+          if (tabId === 'makerChecker') {
+            updateVerificationSummary();
+          }
+        });
+      });
+      
+      // Form submission
+      searchButton.addEventListener('click', function() {
+        const formNo = formNoInput.value.trim();
+        
+        if (formNo === '') {
+          showError('Please enter a Form No.');
+          return;
+        }
+        
+        // Reset verifications when fetching a new form
+        resetVerifications();
+        
+        // Show loader and hide error and content
+        loader.style.display = 'block';
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        formContent.style.display = 'none';
+        
+        // Fetch data from Apps Script Web App
+        fetchFormData(formNo);
+      });
+      
+      // Handle Enter key in the input field
+      formNoInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchButton.click();
+        }
+      });
+      
+      function fetchFormData(formNo) {
+        const scriptUrl = `https://script.google.com/macros/s/AKfycbwZMWnc3c_ek1Z8m_ZuNIL43pjctjSvLllGWXY0T5gQS4qDlLi58j_vcW--Mqib4Y_miA/exec?formNo=${encodeURIComponent(formNo)}`;
+        
+        fetch(scriptUrl)
+          .then(response => response.json())
+          .then(data => {
+            currentFormData = data;
+            currentFormNo = formNo;
+            displayFormData(data, formNo);
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            showError('Error fetching data. Please try again.');
+          });
+      }
+      
+      function displayFormData(data, formNo) {
+        loader.style.display = 'none';
+        
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+        
+        formContent.style.display = 'block';
+        document.getElementById('formNoDisplay').textContent = `RTGS Form #${formNo}`;
+        
+        // Applicant Details
+        setElementText('applicantName', data["Applicant's Name"]);
+        setElementText('mobile', data["mobile"]);
+        setElementText('designation', data["Designation"]);
+        setElementText('school', data["School"]);
+        setElementText('district', data["District"]);
+        setElementText('block', data["Block"]);
+        
+        // Salary Structure
+        setElementText('totalSalary', data["totalSalary"]);
+        setElementText('deductionsAll', data["deductionsAll"]);
+        setElementText('inhandSalary', data["inhandSalary"]);
+        setElementText('otherSourceOfIncome', data["otherSourceOfIncome"]);
+        
+        // Salary A/c Details
+        setElementText('bank', data["bank"]);
+        setElementText('bankDistrict', data["bankDistrict"]);
+        setElementText('branch', data["branch"]);
+        setElementText('salaryAcNo', data["salaryAcNo"]);
+        setElementText('ifscCode', data["ifscCode"]);
+        
+        // Loan Details
+        setElementText('loanCategory', data["Loan Category"]);
+        
+        if (data["Loan Date"]) {
+          const loanDate = new Date(data["Loan Date"]);
+          const options = { day: '2-digit', month: 'short', year: 'numeric' };
+          const formattedDate = loanDate.toLocaleDateString('en-GB', options).replace(/ /g, '-');
+          setElementText('loanDate', formattedDate);
+        } else {
+          setElementText('loanDate', '-');
+        }
+
+        setElementText('loanAmount', formatCurrency(data["Loan Amt"]));
+        
+        const interestRate = (data["Interest Rate"] * 100).toFixed(2);
+        setElementText('interestRate', interestRate + '%');
+     
+        setElementText('subtype', data["Subtype"]);
+        setElementText('oldAccounts', data["Old A/c Nos."]);
+        setElementText('defaulter', data["Defaulter"] ? 'Yes' : 'No');
+        
+        // Payment Details
+        setElementText('transferAmount', formatCurrency(data["Transfer Amt"]));
+        const fileChargeRate = (data["File Charge Rate"] * 100).toFixed(2);
+        setElementText('fileChargeRate', fileChargeRate + '%');
+        setElementText('fileChargeAmount', formatCurrency(data["File Charge Amt"]));
+        
+        // Other Details
+        setElementText('referencePerson', data["Reference Person"] || '-');
+        setElementText('fieldOfficer', data["Field Officer"] || '-');
+        
+        // Show defaulter warning if applicable
+        const defaulterCard = document.getElementById('defaulterCard');
+        if (data["Defaulter"] === true) {
+          defaulterCard.style.backgroundColor = '#fcf8e3';
+          defaulterCard.style.borderLeft = '4px solid #f39c12';
+        } else {
+          defaulterCard.style.backgroundColor = '#f9f9f9';
+          defaulterCard.style.borderLeft = 'none';
+        }
+        
+        // Initialize the MakerChecker system
+        initializeVerificationControls();
+      }
+      
+      function setElementText(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.textContent = value !== undefined && value !== null ? value : '-';
+          
+          // Store the original value in data attribute for reference
+          element.setAttribute('data-original-value', element.textContent);
+        }
+      }
+      
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+        loader.style.display = 'none';
+        formContent.style.display = 'none';
+      }
+      
+      function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.style.display = 'block';
+        errorMessage.style.display = 'none';
+      }
+      
+      function formatCurrency(amount) {
+        if (!amount) return '-';
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return '₹' + num.toLocaleString('en-IN');
+      }
+      
+      // MakerChecker System Functions
+      
+      function initializeVerificationControls() {
+        // Get all verification control elements
+        const correctButtons = document.querySelectorAll('.verification-icon.correct-icon');
+        const incorrectButtons = document.querySelectorAll('.verification-icon.incorrect-icon');
+        
+        // Add event listeners to correct buttons
+        correctButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const infoRow = this.closest('.info-row');
+            const fieldName = infoRow.getAttribute('data-field');
+            const fieldValue = document.getElementById(fieldName).textContent;
+            
+            // Mark field as correct
+            markFieldAsCorrect(infoRow, fieldName, fieldValue);
+            
+            // Update verification summary
+            updateVerificationSummary();
+          });
+        });
+        
+        // Add event listeners to incorrect buttons
+        incorrectButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const infoRow = this.closest('.info-row');
+            const fieldName = infoRow.getAttribute('data-field');
+            const fieldValue = document.getElementById(fieldName).textContent;
+            
+            // Open correction dialog
+            showCorrectionDialog(fieldName, fieldValue);
+          });
+        });
+        
+        // Handle Cancel Correction button
+        cancelCorrectionButton.addEventListener('click', function() {
+          closeCorrectionDialog();
+        });
+        
+        // Handle Save Correction button
+        saveCorrectionButton.addEventListener('click', function() {
+          const fieldName = fieldNameToCorrect.textContent;
+          const originalValue = originalValueToCorrect.textContent;
+          const correctedValue = correctionInput.value.trim();
+          
+          if (correctedValue === '') {
+            alert('Please enter a corrected value.');
+            return;
+          }
+          
+          // Get the info row element
+          const infoRow = document.querySelector(`.info-row[data-field="${fieldName}"]`);
+          
+          // Mark field as incorrect with correction
+          markFieldAsIncorrect(infoRow, fieldName, originalValue, correctedValue);
+          
+          // Close the dialog
+          closeCorrectionDialog();
+          
+          // Update verification summary
+          updateVerificationSummary();
+        });
+        
+        // Handle Submit Verification button
+        submitVerificationButton.addEventListener('click', function() {
+          submitVerificationResults();
+        });
+      }
+      
+      function showCorrectionDialog(fieldName, fieldValue) {
+        // Set dialog content
+        fieldNameToCorrect.textContent = fieldName;
+        originalValueToCorrect.textContent = fieldValue;
+        correctionInput.value = '';
+        
+        // Show dialog
+        correctionDialog.style.display = 'flex';
+      }
+      
+      function closeCorrectionDialog() {
+        correctionDialog.style.display = 'none';
+      }
+      
+      function markFieldAsCorrect(infoRow, fieldName, fieldValue) {
+        // Remove any previous verification styling
+        infoRow.classList.remove('field-incorrect');
+        infoRow.classList.add('field-correct');
+        
+        // Store verification status
+        verifications[fieldName] = {
+          status: 'Correct',
+          originalValue: fieldValue,
+          correction: null
+        };
+      }
+      
+      function markFieldAsIncorrect(infoRow, fieldName, fieldValue, correctedValue) {
+        // Remove any previous verification styling
+        infoRow.classList.remove('field-correct');
+        infoRow.classList.add('field-incorrect');
+        
+        // Store verification status
+        verifications[fieldName] = {
+          status: 'Incorrect',
+          originalValue: fieldValue,
+          correction: correctedValue
+        };
+      }
+      
+      function updateVerificationSummary() {
+        const totalFieldCount = document.querySelectorAll('.info-row[data-field]').length;
+        const verifiedFieldCount = Object.keys(verifications).length;
+        const correctFieldCount = Object.values(verifications).filter(v => v.status === 'Correct').length;
+        const incorrectFieldCount = Object.values(verifications).filter(v => v.status === 'Incorrect').length;
+        
+        // Update counts
+        document.getElementById('totalFields').textContent = totalFieldCount;
+        document.getElementById('verifiedFields').textContent = verifiedFieldCount;
+        document.getElementById('correctFields').textContent = correctFieldCount;
+        document.getElementById('incorrectFields').textContent = incorrectFieldCount;
+        
+        // Enable/disable submit button based on verification progress
+        if (verifiedFieldCount === 0) {
+          submitVerificationButton.disabled = true;
+          submitVerificationButton.style.opacity = '0.5';
+        } else {
+          submitVerificationButton.disabled = false;
+          submitVerificationButton.style.opacity = '1';
+        }
+      }
+      
+      function resetVerifications() {
+        // Clear all verifications
+        Object.keys(verifications).forEach(key => {
+          delete verifications[key];
+        });
+        
+        // Reset field styling
+        document.querySelectorAll('.info-row').forEach(row => {
+          row.classList.remove('field-correct', 'field-incorrect');
+        });
+        
+        // Update summary
+        updateVerificationSummary();
+      }
+      
+      function submitVerificationResults() {
+        if (!currentFormNo) {
+          showError('No form is currently loaded.');
+          return;
+        }
+        
+        if (Object.keys(verifications).length === 0) {
+          showError('Please verify at least one field before submitting.');
+          return;
+        }
+        
+        // Show loader
+        loader.style.display = 'block';
+        
+        // Prepare data for submission
+        const submissionData = {
+          formNumber: currentFormNo,
+          verifications: verifications
+        };
+        
+        // Submit to Apps Script Web App
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbw-6E0WrBWw-Q9VeuCatNYs08UJ8yXpFSaE695pNkHF2Fv7qtvK3tojgNzQqXckdod7bg/exec';
+        
+        fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain'
+          },
+          body: JSON.stringify(submissionData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          loader.style.display = 'none';
+          
+          if (data.status === 'success') {
+            showSuccess('Verification results submitted successfully.');
+          } else {
+            showError('Error submitting verification results: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          loader.style.display = 'none';
+          showError('Error submitting verification results. Please try again.');
+        });
+      }
+    // Helper function to return readable field names for display
+    function getReadableFieldName(fieldName) {
+      const fieldNameMap = {
+        'applicantName': "Applicant's Name",
+        'designation': 'Designation',
+        'mobile': 'Mobile',
+        'school': 'School',
+        'district': 'District',
+        'block': 'Block',
+        'totalSalary': 'Total Salary',
+        'deductionsAll': 'Deductions',
+        'inhandSalary': 'In-hand Salary',
+        'otherSourceOfIncome': 'Other Sources of Income',
+        'bank': 'Bank',
+        'bankDistrict': 'Bank District',
+        'branch': 'Branch',
+        'salaryAcNo': 'Salary A/c No',
+        'ifscCode': 'IFSC Code',
+        'loanCategory': 'Loan Category',
+        'loanDate': 'Loan Date',
+        'loanAmount': 'Loan Amount',
+        'interestRate': 'Interest Rate',
+        'subtype': 'Subtype',
+        'oldAccounts': 'Old A/c Nos.',
+        'defaulter': 'Defaulter',
+        'transferAmount': 'Transfer Amount',
+        'fileChargeRate': 'File Charge Rate',
+        'fileChargeAmount': 'File Charge Amount',
+        'referencePerson': 'Reference Person',
+        'fieldOfficer': 'Field Officer'
+      };
+      
+      return fieldNameMap[fieldName] || fieldName;
+    }
+  });
+</script>
+</body>
+</html>
