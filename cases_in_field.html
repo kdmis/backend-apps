@@ -196,12 +196,20 @@
       }
     }
 
-    // Function to fetch pending documents data
+    // Function to fetch pending documents data - FIXED
     async function fetchPendingDocs() {
       try {
         const res = await fetch(docsApiUrl);
         const data = await res.json();
-        return data.filter(item => item.docsPending); // Only return items with pending docs
+        
+        // Check if data is an array before filtering
+        if (Array.isArray(data)) {
+          return data.filter(item => item.docsPending); // Only return items with pending docs
+        } else {
+          console.warn("API response is not an array:", data);
+          // If data is not an array, return empty array or try to convert if possible
+          return Array.isArray(data.data) ? data.data.filter(item => item.docsPending) : [];
+        }
       } catch (error) {
         console.error("Error fetching pending docs:", error);
         return [];
